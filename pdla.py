@@ -28,37 +28,22 @@ Assumptions:
 
 
 
-class Rectangle:
-   def __init__(self, length, breadth, unit_cost=0):
-       self.length = length
-       self.breadth = breadth
-       self.unit_cost = unit_cost
-   
-   def get_perimeter(self):
-       return 2 * (self.length + self.breadth)
-   
-   def get_area(self):
-       return self.length * self.breadth
-   
-   def calculate_cost(self):
-       area = self.get_area()
-       return area * self.unit_cost
-# breadth = 120 cm, length = 160 cm, 1 cm^2 = Rs 2000
-r = Rectangle(160, 120, 2000)
-print("Area of Rectangle: %s cm^2" % (r.get_area()))
-print("Cost of rectangular field: Rs. %s " %(r.calculate_cost()))
+
 """
 
 
 class pdla(object):
-    def __init__(self, rows, columns, range):
+    def __init__(self, rows, columns, span):
         self.rows = rows
         self.columns = columns
-        self.range = range
-        self.scale_display = scaleDisplay(self.range)
+        self.span = span
+        self.scale_display = scaleDisplay(self.span)
 
     def get_scale(self):
         return self.scale_display.value()
+
+    def get_scale_status(self):
+        return self.scale_display.ledStatus()
 
     def update(self):
         print("updating")
@@ -70,17 +55,38 @@ class ledCell:
     pass
 
 class scaleDisplay(object):
-    def __init__(self, range):
-        self.range = range
-        self.index = int(len(self.range) / 2)
+    def __init__(self, markers):
+        self.markers = markers
+        self.span = len(self.markers)
+        self.index = int(self.span / 2)
+        self.LEDs = []
+        for self.LED in range(self.span):
+            self.LEDs.append(scaleLED(self.LED))
+        self.LEDs[self.index].set_LED(True)
 
     def value(self):
-        return self.range[self.index]
+        return self.markers[self.index]
+
+    def ledStatus(self):
+        self.statuses = []
+        for self.LED in self.LEDs:
+            self.statuses.append(self.LED.return_state())
+        return self.statuses
+
 
 class scaleLED:
-    pass
+    def __init__(self, position):
+        self.position = position
+        self.state = False
 
+    def __repr__(self):
+        return f"{self.position}, {self.state}"
 
+    def set_LED(self, new_value):
+        self.state = new_value
+
+    def return_state(self):
+        return self.state
 
 
 
@@ -93,6 +99,8 @@ def main():
         device.update()
 
     print(f"Scale value = {device.get_scale()}")
+    print(f"LED Display = {device.get_scale_status()}")
+
 
 if __name__ == "__main__":
     # execute only if run as a script
