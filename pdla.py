@@ -12,9 +12,8 @@ import time
 
 """
 Things that have to happen:
-    Get current GPS location
-    Get current scale factor
-    Respond to button pushes
+x    Get current GPS location
+x    Get current scale factor
     Generate bounding box
     Generate airspace cells
     Get local aircraft
@@ -22,6 +21,7 @@ Things that have to happen:
     Update cell display
     Update scale factor display
     Update scale factor
+    Respond to button pushes
 
 Assumptions:
     Cell display is an 8x8 matrix
@@ -48,10 +48,10 @@ class pdla(object):
     def update(self):
         print("updating")
 
-class ledMatrix:
+class ledMatrix(object):
     pass
 
-class ledCell:
+class ledCell(object):
     pass
 
 class scaleDisplay(object):
@@ -73,8 +73,7 @@ class scaleDisplay(object):
             self.statuses.append(self.LED.return_state())
         return self.statuses
 
-
-class scaleLED:
+class scaleLED(object):
     def __init__(self, position):
         self.position = position
         self.state = False
@@ -88,16 +87,41 @@ class scaleLED:
     def return_state(self):
         return self.state
 
+class GPSinterface(object):
+    def __init__(self, latlong):
+        self.lat, self.long = latlong
+        self.lat += 1.0
+        self.long += 1.0
+        self.latlong = (self.lat, self.long)
+        self.initial_latlong = self.latlong
+        self.last_latlong = self.latlong
+        print(f"My GPS coordinates are: {self.latlong}")
 
+    # Update the system gps coordinates with new coordinates
+    def update_latlong(self):
+        pass
 
+    # Utilize the gps interface to read new coordinates
+    def get_new_latlong(self):
+        pass
+
+    # Account for minor variations and set true only if actual
+    # gps coordinates are x% differnt from current system gps
+    def test_latlong(self):
+        return False
 
 def main():
     # create an instance of the device with an 8x8 grid.
     # it has a range with five positions weighted as shown.
-    device = pdla(8, 8, [1, 2, 5, 10, 20, 50])
+    device = pdla(8, 8, [1, 2, 5, 10, 20, 50, 100, 200])
+    default_coordinates = (-111.000,33.000)
+    gps = GPSinterface(default_coordinates)
+
     while False:
         device.update()
 
+    print(f"GPS Coordinates = {gps.latlong}")
+    print(f"GPS location test = {gps.test_latlong()}")
     print(f"Scale value = {device.get_scale()}")
     print(f"LED Display = {device.get_scale_status()}")
 
