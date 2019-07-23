@@ -110,6 +110,17 @@ class GPSinterface(object):
     def test_latlong(self):
         return False
 
+class airSpace(object):
+    def __init__(self, latlong):
+        self.lat, self.long = latlong
+        self.lat += 1.0
+        self.long += 1.0
+        self.latlong = (self.lat, self.long)
+        self.initial_latlong = self.latlong
+        self.last_latlong = self.latlong
+        print(f"My GPS coordinates are: {self.latlong}")
+
+
 def main():
     # create an instance of the device with an 8x8 grid.
     # it has a range with five positions weighted as shown.
