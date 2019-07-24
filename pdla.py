@@ -111,13 +111,16 @@ class GPSinterface(object):
         return False
 
 class airSpace(object):
-    def __init__(self, latlong):
-        self.lat, self.long = latlong
-        self.lat += 1.0
-        self.long += 1.0
-        self.latlong = (self.lat, self.long)
-        self.initial_latlong = self.latlong
-        self.last_latlong = self.latlong
+    # The airspace is going to be created from the center lat, long.
+    # It will extend (4 x scale) miles in each compass direction
+    # from the center.  It will then create sub-airspaces based on
+    # the number of rows and columns it will be divided into.
+    def __init__(self, lat, long, rows, columns, scale):
+        self.lat = lat
+        self.long = long
+        self.rows = rows
+        self.columns = columns
+        self.scale = scale
         print(f"My GPS coordinates are: {self.latlong}")
 
 

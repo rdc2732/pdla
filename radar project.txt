@@ -1,0 +1,21 @@
+Classes:
+
+Airspace
+	init: define binding box (lat and long)
+	init: define sectors (number)
+	init: create all sectors
+	clean sectors of aircraft
+	add aircraft to sectors
+	report on all sectors
+	
+Aircraft
+    init: define location, altitude, airspeed and identification
+	delete self
+	
+Sector
+    init: define binding box (lat and long)
+	init: define sector number
+	init: clean all aircraft
+	add aircraft
+	report aircraft
+	
