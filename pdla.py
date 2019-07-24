@@ -9,6 +9,7 @@
 
 import sys
 import time
+import math
 
 """
 Things that have to happen:
@@ -90,12 +91,18 @@ class scaleLED(object):
 class GPSinterface(object):
     def __init__(self, latlong):
         self.lat, self.long = latlong
-        self.lat += 1.0
-        self.long += 1.0
         self.latlong = (self.lat, self.long)
         self.initial_latlong = self.latlong
         self.last_latlong = self.latlong
         print(f"My GPS coordinates are: {self.latlong}")
+
+    def get_conversion(self):
+        earth = 24901 # Circumference of earth in miles
+        degLat = earth / 360 # miles of 1 degree latitude
+        milesLat = 1 / degLat # degrees of 1 mile lstitude
+        degLong = earth * math.cos(self.long * 2 * math.pi/360) / 360
+        milesLong = 1 / degLong
+        return (milesLong, milesLat)
 
     # Update the system gps coordinates with new coordinates
     def update_latlong(self):
@@ -121,14 +128,27 @@ class airSpace(object):
         self.rows = rows
         self.columns = columns
         self.scale = scale
-        print(f"My GPS coordinates are: {self.latlong}")
+
+
+
+"""
+1) Determine how many degrees one mile latitude is (a constant)
+2) Determine how many degrees one mile longitude is (a constant based on latitude)
+3) Determine UL = [latitude - (Cols / 2) * Scale, longitude + (Cols / 2) * Scale ]
+4) Determine LR = [latitude + (Cols / 2) * Scale, longitude - (Cols / 2) * Scale ]
+5) Determine CTR for each cell in rows, cols.
+
+
+"""
+
+
 
 
 def main():
     # create an instance of the device with an 8x8 grid.
     # it has a range with five positions weighted as shown.
-    device = pdla(8, 8, [1, 2, 5, 10, 20, 50, 100, 200])
-    default_coordinates = (-111.000,33.000)
+    device = pdla(8, 8, [.5, 1, 2, 5, 10])
+    default_coordinates = (-111.7304790, 33.2674290)
     gps = GPSinterface(default_coordinates)
 
     while False:
@@ -136,6 +156,7 @@ def main():
 
     print(f"GPS Coordinates = {gps.latlong}")
     print(f"GPS location test = {gps.test_latlong()}")
+    print(f"Long/Lat conversion factors = {gps.get_conversion()}")
     print(f"Scale value = {device.get_scale()}")
     print(f"LED Display = {device.get_scale_status()}")
 
