@@ -34,9 +34,8 @@ Assumptions:
 
 
 class pdla(object):
-    def __init__(self, rows, columns, span):
-        self.rows = rows
-        self.columns = columns
+    def __init__(self, grid, span):
+        self.rows, self.columns = grid
         self.span = span
         self.scale_display = scaleDisplay(self.span)
 
@@ -89,20 +88,18 @@ class scaleLED(object):
         return self.state
 
 class GPSinterface(object):
-    def __init__(self, latlong):
-        self.lat, self.long = latlong
-        self.latlong = (self.lat, self.long)
-        self.initial_latlong = self.latlong
-        self.last_latlong = self.latlong
-        print(f"My GPS coordinates are: {self.latlong}")
+    def __init__(self, longlat):
+        self.long, self.lat  = longlat
+        self.longlat = (self.long, self.lat)
+        self.initial_longlat = self.longlat
+        self.last_longlat = self.longlat
 
     def get_conversion(self):
         earth = 24901 # Circumference of earth in miles
-        degLat = earth / 360 # miles of 1 degree latitude
-        milesLat = 1 / degLat # degrees of 1 mile lstitude
-        degLong = earth * math.cos(self.long * 2 * math.pi/360) / 360
-        milesLong = 1 / degLong
-        return (milesLong, milesLat)
+        degreesPerMileLat = 360 / earth # degrees of 1 mile lstitude
+        milesPerDegreeLong = earth * math.cos(self.lat * 2 * math.pi/360) / 360
+        degreesPerMileLong = 1 / milesPerDegreeLong
+        return (degreesPerMileLong, degreesPerMileLat)
 
     # Update the system gps coordinates with new coordinates
     def update_latlong(self):
@@ -119,27 +116,37 @@ class GPSinterface(object):
 
 class airSpace(object):
     # The airspace is going to be created from the center lat, long.
-    # It will extend (4 x scale) miles in each compass direction
+    # It will extend (rows/2 or cols/2 x scale) miles in each compass direction
     # from the center.  It will then create sub-airspaces based on
     # the number of rows and columns it will be divided into.
-    def __init__(self, lat, long, rows, columns, scale):
-        self.lat = lat
-        self.long = long
-        self.rows = rows
-        self.columns = columns
+    def __init__(self, longlat, grid, scale, degreeConversions):
+        self.long, self.lat = longlat
+        self.rows, self.columns = grid
         self.scale = scale
+        self.longDegConv, self.latDegConv = degreeConversions
+        self.degreeConversions = (self.longDegConv, self.latDegConv)
+        self.UL = (self.long - self.scale * self.columns * self.longDegConv, \
+                   self.lat + self.scale * self.rows * self.latDegConv)
+        self.LR = (self.long + self.scale * self.columns * self.longDegConv, \
+                   self.lat - self.scale * self.rows * self.latDegConv)
+        print(f"{(self.long, self.lat)}")
 
+        self.latOffset = self.scale * self.latDegConv
+        self.longOffset = self.scale * self.longDegConv
 
+        # preset the initial cellCoord to be 1/2 a box above and left of UL. When it is incremented
+        # by a full offset it will end up in the correct boxes for each row and column
+        self.cellCoord = (self.UL[0] - self.longOffset / 2, self.UL[1] - self.latOffset / 2)
 
-"""
-1) Determine how many degrees one mile latitude is (a constant)
-2) Determine how many degrees one mile longitude is (a constant based on latitude)
-3) Determine UL = [latitude - (Cols / 2) * Scale, longitude + (Cols / 2) * Scale ]
-4) Determine LR = [latitude + (Cols / 2) * Scale, longitude - (Cols / 2) * Scale ]
-5) Determine CTR for each cell in rows, cols.
+        # build an empty 2D array
+        self.arr = [[None for i in range(self.columns)] for j in range(self.rows)]
 
-
-"""
+        for self.i in range(self.rows):
+            for self.j in range(self.columns):
+                self.newLong = self.cellCoord[0] + self.longOffset * self.i
+                self.newLat = self.cellCoord[1] + self.latOffset * self.j
+                self.arr[self.i][self.j] = \
+                    airSpace((self.newLong, self.newLat),(0,0), self.scale, self.degreeConversions)
 
 
 
@@ -147,18 +154,23 @@ class airSpace(object):
 def main():
     # create an instance of the device with an 8x8 grid.
     # it has a range with five positions weighted as shown.
-    device = pdla(8, 8, [.5, 1, 2, 5, 10])
+    gridsize = (8,8) # rows, columns
+    device = pdla(gridsize, [.5, 1, 4, 50, 100])
+    currentScale = device.get_scale()
     default_coordinates = (-111.7304790, 33.2674290)
     gps = GPSinterface(default_coordinates)
+    currentGPS = gps.longlat
+    degreeConversions = gps.get_conversion()
+    airspace = airSpace(currentGPS, gridsize, currentScale, degreeConversions)
 
     while False:
         device.update()
 
-    print(f"GPS Coordinates = {gps.latlong}")
-    print(f"GPS location test = {gps.test_latlong()}")
-    print(f"Long/Lat conversion factors = {gps.get_conversion()}")
-    print(f"Scale value = {device.get_scale()}")
-    print(f"LED Display = {device.get_scale_status()}")
+    # print(f"GPS Coordinates = {currentGPS}")
+    # print(f"GPS location test = {gps.test_latlong()}")
+    # print(f"Long/Lat conversion factors = {degreeConversions}")
+    # print(f"Scale value = {currentScale}")
+    # print(f"LED Display = {device.get_scale_status()}")
 
 
 if __name__ == "__main__":
