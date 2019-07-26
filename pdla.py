@@ -120,41 +120,58 @@ class airSpace(object):
     # from the center.  It will then create sub-airspaces based on
     # the number of rows and columns it will be divided into.
     def __init__(self, longlat, grid, scale, degreeConversions):
+        self.CTR = longlat
         self.long, self.lat = longlat
         self.rows, self.columns = grid
         self.scale = scale
         self.longDegConv, self.latDegConv = degreeConversions
         self.degreeConversions = (self.longDegConv, self.latDegConv)
-        self.UL = (self.long - self.scale * self.columns * self.longDegConv, \
-                   self.lat + self.scale * self.rows * self.latDegConv)
-        self.LR = (self.long + self.scale * self.columns * self.longDegConv, \
-                   self.lat - self.scale * self.rows * self.latDegConv)
-        print(f"{(self.long, self.lat)}")
-
         self.latOffset = self.scale * self.latDegConv
         self.longOffset = self.scale * self.longDegConv
 
+        # Calculate corners of box as CTR +/- 1/2 rows,cols * offSet
+        self.UL = (self.long - (self.columns * self.longOffset / 2), \
+                   self.lat + (self.rows * self.latOffset / 2))
+        self.LR = (self.long + (self.columns * self.longOffset / 2), \
+                   self.lat - (self.rows * self.latOffset / 2))
+
+        print(f"{self.CTR[0]}, {self.CTR[1]}, {self.UL[0]}, {self.UL[1]}, {self.LR[0]}, {self.LR[1]}")
+        print(f"{self.longOffset}, {self.latOffset}, {self.rows}, {self.columns}")
+
         # preset the initial cellCoord to be 1/2 a box above and left of UL. When it is incremented
         # by a full offset it will end up in the correct boxes for each row and column
-        self.cellCoord = (self.UL[0] - self.longOffset / 2, self.UL[1] - self.latOffset / 2)
+        self.cellCoord = (self.UL[0] - (self.longOffset / 2), self.UL[1] + (self.latOffset / 2))
+        # print(f"UL = {self.UL}, cellCoord =  {self.cellCoord}")
 
-        # build an empty 2D array
-        self.arr = [[None for i in range(self.columns)] for j in range(self.rows)]
+        if self.rows > 1 or self.columns > 1: # Don't try to divde individual cells
+            # build an empty 2D array
+            self.arr = [[None for i in range(self.columns)] for j in range(self.rows)]
 
-        for self.i in range(self.rows):
-            for self.j in range(self.columns):
-                self.newLong = self.cellCoord[0] + self.longOffset * self.i
-                self.newLat = self.cellCoord[1] + self.latOffset * self.j
-                self.arr[self.i][self.j] = \
-                    airSpace((self.newLong, self.newLat),(0,0), self.scale, self.degreeConversions)
+            # fill the array with airspace cells
+            for self.i in range(self.rows):
+                for self.j in range(self.columns):
+                    self.newLong = self.cellCoord[0] + self.longOffset * (self.i + 1)
+                    self.newLat = self.cellCoord[1] - self.latOffset * (self.j + 1)
+                    # print(f"{self.i},{self.j},A{str(self.i*8+self.j)},{self.newLong},{self.newLat}")
+                    self.arr[self.i][self.j] = \
+                        airSpace((self.newLong, self.newLat),(1,1), self.scale, self.degreeConversions)
 
+    def report_cells(self):
+        self.numrows = len(self.arr)
+        self.numcols = len(self.arr[0])
 
+        for self.i in range(self.numrows):
+            for self.j in range (self.numcols):
+                print(f"A{str(self.i*8+self.j)}: ",end="")
+                print(f"{self.arr[self.i][self.j].CTR[0]},{self.arr[self.i][self.j].CTR[1]},",end="")
+                print(f"{self.arr[self.i][self.j].UL[0]},{self.arr[self.i][self.j].UL[1]},",end="")
+                print(f"{self.arr[self.i][self.j].LR[0]},{self.arr[self.i][self.j].LR[1]}")
 
 
 def main():
     # create an instance of the device with an 8x8 grid.
     # it has a range with five positions weighted as shown.
-    gridsize = (8,8) # rows, columns
+    gridsize = (2,2) # rows, columns
     device = pdla(gridsize, [.5, 1, 4, 50, 100])
     currentScale = device.get_scale()
     default_coordinates = (-111.7304790, 33.2674290)
@@ -162,6 +179,7 @@ def main():
     currentGPS = gps.longlat
     degreeConversions = gps.get_conversion()
     airspace = airSpace(currentGPS, gridsize, currentScale, degreeConversions)
+    # airspace.report_cells()
 
     while False:
         device.update()
