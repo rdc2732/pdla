@@ -135,8 +135,8 @@ class airSpace(object):
         self.LR = (self.long + (self.columns * self.longOffset / 2), \
                    self.lat - (self.rows * self.latOffset / 2))
 
-        print(f"{self.CTR[0]}, {self.CTR[1]}, {self.UL[0]}, {self.UL[1]}, {self.LR[0]}, {self.LR[1]}")
-        print(f"{self.longOffset}, {self.latOffset}, {self.rows}, {self.columns}")
+        # print(f"{self.CTR[0]}, {self.CTR[1]}, {self.UL[0]}, {self.UL[1]}, {self.LR[0]}, {self.LR[1]}")
+        # print(f"{self.longOffset}, {self.latOffset}, {self.rows}, {self.columns}")
 
         # preset the initial cellCoord to be 1/2 a box above and left of UL. When it is incremented
         # by a full offset it will end up in the correct boxes for each row and column
@@ -162,7 +162,7 @@ class airSpace(object):
 
         for self.i in range(self.numrows):
             for self.j in range (self.numcols):
-                print(f"A{str(self.i*8+self.j)}: ",end="")
+                print(f"A{str(self.i*self.numrows+self.j)}: ",end="")
                 print(f"{self.arr[self.i][self.j].CTR[0]},{self.arr[self.i][self.j].CTR[1]},",end="")
                 print(f"{self.arr[self.i][self.j].UL[0]},{self.arr[self.i][self.j].UL[1]},",end="")
                 print(f"{self.arr[self.i][self.j].LR[0]},{self.arr[self.i][self.j].LR[1]}")
@@ -179,7 +179,7 @@ def main():
     currentGPS = gps.longlat
     degreeConversions = gps.get_conversion()
     airspace = airSpace(currentGPS, gridsize, currentScale, degreeConversions)
-    # airspace.report_cells()
+    airspace.report_cells()
 
     while False:
         device.update()
