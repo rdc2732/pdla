@@ -6,19 +6,21 @@
    the PDLA system.  It is a low resolution, portable display of
    aircraft in the area near the user.
 """
-
+from opensky_api import OpenSkyApi
 import sys
 import time
 import math
+
+api = OpenSkyApi()
 
 """
 Things that have to happen:
 x    Get current GPS location
 x    Get current scale factor
-    Generate bounding box
-    Generate airspace cells
+x    Generate bounding box
+x    Generate airspace cells
     Get local aircraft
-    Map aircraft to cells
+x    Map aircraft to cells
     Update cell display
     Update scale factor display
     Update scale factor
@@ -114,6 +116,13 @@ class GPSinterface(object):
     def test_latlong(self):
         return False
 
+
+class airplane(object):
+    def __init__(self, longlat, ID):
+        self.long, self.lat  = longlat
+        self.ID = ID
+
+
 class airSpace(object):
     # The airspace is going to be created from the center lat, long.
     # It will extend (rows/2 or cols/2 x scale) miles in each compass direction
@@ -128,6 +137,7 @@ class airSpace(object):
         self.degreeConversions = (self.longDegConv, self.latDegConv)
         self.latOffset = self.scale * self.latDegConv
         self.longOffset = self.scale * self.longDegConv
+        self.planes = []
 
         # Calculate corners of box as CTR +/- 1/2 rows,cols * offSet
         self.UL = (self.long - (self.columns * self.longOffset / 2), \
@@ -157,32 +167,72 @@ class airSpace(object):
                         airSpace((self.newLong, self.newLat),(1,1), self.scale, self.degreeConversions)
 
     def report_cells(self):
-        self.numrows = len(self.arr)
-        self.numcols = len(self.arr[0])
+        for self.i in range(self.rows):
+            for self.j in range (self.columns):
+                self.cell = self.arr[self.i][self.j]
+                # print(f"A{str(self.i*self.rows+self.j)}-{self.i}{self.j}: ",end="")
+                # print(f"{self.cell.CTR[0]:.4f},{self.cell.CTR[1]:.4f},",end="")
+                # print(f"{self.cell.UL[0]:.4f},{self.cell.UL[1]:.4f},",end="")
+                # print(f"{self.cell.LR[0]:.4f},{self.cell.LR[1]:.4f}",end="")
+                # print(f"A{str(self.i*self.numrows+self.j)}-{self.i}{self.j}: planes = {len(self.cell.planes)}",end="")
+                if len(self.cell.planes) > 0:
+                    for self.aPlane in self.cell.planes:
+                        print(f"{self.i}{self.j}:\t{self.aPlane.ID} ({self.aPlane.long:.4f},{self.aPlane.lat:.4f})")
+        print("\n---\n")
 
-        for self.i in range(self.numrows):
-            for self.j in range (self.numcols):
-                print(f"A{str(self.i*self.numrows+self.j)}: ",end="")
-                print(f"{self.arr[self.i][self.j].CTR[0]},{self.arr[self.i][self.j].CTR[1]},",end="")
-                print(f"{self.arr[self.i][self.j].UL[0]},{self.arr[self.i][self.j].UL[1]},",end="")
-                print(f"{self.arr[self.i][self.j].LR[0]},{self.arr[self.i][self.j].LR[1]}")
+    def report_grid(self):
+        for self.i in range(self.rows):
+            for self.j in range (self.columns):
+                self.cell = self.arr[self.i][self.j]
+                print(f"{len(self.cell.planes):02} ",end="")
+            print()
+        print("\n---\n")
+
+
+    def clear_planes(self):
+        self.planes = []
+        for self.i in range(self.rows):
+            for self.j in range (self.columns):
+                self.arr[self.i][self.j].planes = []
+
+    def add_planes(self, plane):
+        self.planes.append(plane)
+        for self.i in range(self.rows):
+            for self.j in range (self.columns):
+                if plane.long >= self.arr[self.i][self.j].UL[0] and \
+                    plane.lat <= self.arr[self.i][self.j].UL[1] and \
+                    plane.long < self.arr[self.i][self.j].LR[0] and \
+                    plane.lat > self.arr[self.i][self.j].LR[1]:
+                    self.arr[self.i][self.j].planes.append(plane)
 
 
 def main():
     # create an instance of the device with an 8x8 grid.
     # it has a range with five positions weighted as shown.
-    gridsize = (2,2) # rows, columns
-    device = pdla(gridsize, [.5, 1, 4, 50, 100])
+    gridsize = (8,8) # rows, columns
+    # device = pdla(gridsize, [.5, 1, 4, 50, 100])
+    device = pdla(gridsize, [5, 5, 5, 5, 5])
     currentScale = device.get_scale()
-    default_coordinates = (-111.7304790, 33.2674290)
+    # default_coordinates = (-111.7304790, 33.2674290)
+    default_coordinates = (-112.011667, 33.434167)
     gps = GPSinterface(default_coordinates)
     currentGPS = gps.longlat
     degreeConversions = gps.get_conversion()
     airspace = airSpace(currentGPS, gridsize, currentScale, degreeConversions)
-    airspace.report_cells()
+    bbox_coords = (airspace.LR[1],airspace.UL[1],airspace.UL[0],airspace.LR[0])
 
-    while False:
-        device.update()
+    while True:
+        s = api.get_states(bbox=bbox_coords)
+        for s1 in s.states:
+            callsign = (s1.callsign + "*" * 8)[:7]
+            long = s1.longitude
+            lat = s1.latitude
+            newPlane = airplane((long,lat), callsign)
+            airspace.add_planes(newPlane)
+        airspace.report_grid()
+        airspace.clear_planes()
+        time.sleep(10)
+
 
     # print(f"GPS Coordinates = {currentGPS}")
     # print(f"GPS location test = {gps.test_latlong()}")
