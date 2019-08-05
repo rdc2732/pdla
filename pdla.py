@@ -19,7 +19,7 @@ x    Get current GPS location
 x    Get current scale factor
 x    Generate bounding box
 x    Generate airspace cells
-    Get local aircraft
+x    Get local aircraft
 x    Map aircraft to cells
     Update cell display
     Update scale factor display
@@ -189,6 +189,19 @@ class airSpace(object):
         print("\n---\n")
 
 
+    def report_hex(self):
+        self.hex_buffer = []
+        for self.i in range(self.rows):
+            self.hex_item = 0
+            for self.j in range (self.columns-1, -1, -1):
+                if len(self.arr[self.i][self.j].planes) > 0:
+                    self.hex_item += 2 ** (7-self.j)
+            self.hex_buffer.append(self.hex_item)
+
+        return(self.hex_buffer)
+
+
+
     def clear_planes(self):
         self.planes = []
         for self.i in range(self.rows):
@@ -222,15 +235,23 @@ def main():
     bbox_coords = (airspace.LR[1],airspace.UL[1],airspace.UL[0],airspace.LR[0])
 
     while True:
-        s = api.get_states(bbox=bbox_coords)
-        for s1 in s.states:
-            callsign = (s1.callsign + "*" * 8)[:7]
-            long = s1.longitude
-            lat = s1.latitude
-            newPlane = airplane((long,lat), callsign)
-            airspace.add_planes(newPlane)
-        airspace.report_grid()
-        airspace.clear_planes()
+        try:
+            s = api.get_states(bbox=bbox_coords)
+        except:  # catch *all* exceptions
+            e = sys.exc_info()[0]
+            print("\tError: %s\n" % e)
+        else:
+            for s1 in s.states:
+                callsign = (s1.callsign + "*" * 8)[:7]
+                long = s1.longitude
+                lat = s1.latitude
+                newPlane = airplane((long,lat), callsign)
+                airspace.add_planes(newPlane)
+            airspace.report_grid()
+            bytes = airspace.report_hex()
+            for x in bytes:
+                print(f"{x:02x}")
+            airspace.clear_planes()
         time.sleep(10)
 
 
