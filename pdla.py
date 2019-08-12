@@ -198,8 +198,18 @@ class airSpace(object):
                     self.hex_item += 2 ** (7-self.j)
             self.hex_buffer.append(self.hex_item)
 
-        return(self.hex_buffer)
+        return self.hex_buffer
 
+    def report_hex2(self):
+        self.hex_buffer = []
+        for self.i in range(self.rows):
+            self.hex_item = 0
+            for self.j in range (self.columns):
+                if len(self.arr[self.i][self.j].planes) > 0:
+                    self.hex_item += 2 ** (self.j)
+            self.hex_buffer.append(self.hex_item)
+
+        return self.hex_buffer
 
 
     def clear_planes(self):
@@ -226,8 +236,8 @@ def main():
     # device = pdla(gridsize, [.5, 1, 4, 50, 100])
     device = pdla(gridsize, [5, 5, 5, 5, 5])
     currentScale = device.get_scale()
-    # default_coordinates = (-111.7304790, 33.2674290)
-    default_coordinates = (-112.011667, 33.434167)
+    default_coordinates = (-111.7304790, 33.2674290)
+    #default_coordinates = (-112.011667, 33.434167)
     gps = GPSinterface(default_coordinates)
     currentGPS = gps.longlat
     degreeConversions = gps.get_conversion()
@@ -248,7 +258,11 @@ def main():
                 newPlane = airplane((long,lat), callsign)
                 airspace.add_planes(newPlane)
             airspace.report_grid()
-            bytes = airspace.report_hex()
+            # bytes = airspace.report_hex()
+            # for x in bytes:
+            #     print(f"{x:02x}")
+            # print()
+            bytes = airspace.report_hex2()
             for x in bytes:
                 print(f"{x:02x}")
             airspace.clear_planes()
