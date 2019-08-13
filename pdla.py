@@ -81,7 +81,7 @@ class scaleLED(object):
         self.state = False
 
     def __repr__(self):
-        return f"{self.position}, {self.state}"
+        return "%s, %s" % (self.position, self.state)
 
     def set_LED(self, new_value):
         self.state = new_value
@@ -177,14 +177,14 @@ class airSpace(object):
                 # print(f"A{str(self.i*self.numrows+self.j)}-{self.i}{self.j}: planes = {len(self.cell.planes)}",end="")
                 if len(self.cell.planes) > 0:
                     for self.aPlane in self.cell.planes:
-                        print(f"{self.i}{self.j}:\t{self.aPlane.ID} ({self.aPlane.long:.4f},{self.aPlane.lat:.4f})")
+                        print("%02d%02d:\t%s (%.4f, %.4f)" % (self.i, self.j, self.aPlane.ID, self.aPlane.long, self.aPlane.lat))
         print("\n---\n")
 
     def report_grid(self):
         for self.i in range(self.rows):
             for self.j in range (self.columns):
                 self.cell = self.arr[self.i][self.j]
-                print(f"{len(self.cell.planes):02} ",end="")
+                print("%02d " % len(self.cell.planes),end="")
             print()
         print("\n---\n")
 
@@ -234,7 +234,7 @@ def main():
     # it has a range with five positions weighted as shown.
     gridsize = (8,8) # rows, columns
     # device = pdla(gridsize, [.5, 1, 4, 50, 100])
-    device = pdla(gridsize, [5, 5, 5, 5, 5])
+    device = pdla(gridsize, [10, 10, 10, 10, 10])
     currentScale = device.get_scale()
     default_coordinates = (-111.7304790, 33.2674290)
     #default_coordinates = (-112.011667, 33.434167)
@@ -249,7 +249,7 @@ def main():
             s = api.get_states(bbox=bbox_coords)
         except:  # catch *all* exceptions
             e = sys.exc_info()[0]
-            print("\tError: %s\n" % e)
+            # print("\tError: %s\n" % e)
         else:
             for s1 in s.states:
                 callsign = (s1.callsign + "*" * 8)[:7]
@@ -264,7 +264,7 @@ def main():
             # print()
             bytes = airspace.report_hex2()
             for x in bytes:
-                print(f"{x:02x}")
+                print("%02X" % x)
             airspace.clear_planes()
         time.sleep(10)
 
