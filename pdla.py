@@ -234,7 +234,7 @@ def main():
     # it has a range with five positions weighted as shown.
     gridsize = (8,8) # rows, columns
     # device = pdla(gridsize, [.5, 1, 4, 50, 100])
-    device = pdla(gridsize, [10, 10, 10, 10, 10])
+    device = pdla(gridsize, [4])
     currentScale = device.get_scale()
     default_coordinates = (-111.7304790, 33.2674290)
     #default_coordinates = (-112.011667, 33.434167)
@@ -244,30 +244,63 @@ def main():
     airspace = airSpace(currentGPS, gridsize, currentScale, degreeConversions)
     bbox_coords = (airspace.LR[1],airspace.UL[1],airspace.UL[0],airspace.LR[0])
 
+    simulate_list = [
+        ((-111.834224364052, 33.1517709942974), "POS1"),\
+        ((-111.834224364052, 33.1806854957231), "POS2"),\
+        ((-111.834224364052, 33.2095999971487), "POS3"),\
+        ((-111.834224364052, 33.2385144985744), "POS4"),\
+        ((-111.834224364052, 33.2963435014256), "POS5"),\
+        ((-111.834224364052, 33.3252580028513), "POS6"),\
+        ((-111.799642576034, 33.3252580028513), "POS7"),\
+        ((-111.765060788017, 33.3252580028513), "POS8"),\
+        ((-111.695897211983, 33.3252580028513), "POS9"),\
+        ((-111.661315423966, 33.3252580028513), "POS10"),\
+        ((-111.626733635948, 33.3252580028513), "POS11"),\
+        ((-111.626733635948, 33.2963435014256), "POS12"),\
+        ((-111.626733635948, 33.2385144985744), "POS13"),\
+        ((-111.626733635948, 33.2095999971487), "POS14"),\
+        ((-111.661315423966, 33.2095999971487), "POS15"),\
+        ((-111.695897211983, 33.2095999971487), "POS16"),\
+        ((-111.695897211983, 33.1806854957231), "POS17"),\
+        ((-111.695897211983, 33.1517709942974), "POS18")
+        ]
+
+
+    # while True:
+    #     try:
+    #         s = api.get_states(bbox=bbox_coords)
+    #     except:  # catch *all* exceptions
+    #         e = sys.exc_info()[0]
+    #         # print("\tError: %s\n" % e)
+    #     else:
+    #         for s1 in s.states:
+    #             callsign = (s1.callsign + "*" * 8)[:7]
+    #             long = s1.longitude
+    #             lat = s1.latitude
+    #             newPlane = airplane((long,lat), callsign)
+    #             airspace.add_planes(newPlane)
+    #         airspace.report_grid()
+    #         # bytes = airspace.report_hex()
+    #         # for x in bytes:
+    #         #     print(f"{x:02x}")
+    #         # print()
+    #         bytes = airspace.report_hex2()
+    #         for x in bytes:
+    #             print("%02X" % x)
+    #         airspace.clear_planes()
+    #     time.sleep(10)
+
     while True:
-        try:
-            s = api.get_states(bbox=bbox_coords)
-        except:  # catch *all* exceptions
-            e = sys.exc_info()[0]
-            # print("\tError: %s\n" % e)
-        else:
-            for s1 in s.states:
-                callsign = (s1.callsign + "*" * 8)[:7]
-                long = s1.longitude
-                lat = s1.latitude
-                newPlane = airplane((long,lat), callsign)
-                airspace.add_planes(newPlane)
+        for sim in simulate_list:
+            print(sim[0],sim[1])
+            newPlane = airplane(sim[0],sim[1])
+            airspace.add_planes(newPlane)
             airspace.report_grid()
-            # bytes = airspace.report_hex()
-            # for x in bytes:
-            #     print(f"{x:02x}")
-            # print()
             bytes = airspace.report_hex2()
             for x in bytes:
                 print("%02X" % x)
             airspace.clear_planes()
-        time.sleep(10)
-
+            time.sleep(10)
 
     # print(f"GPS Coordinates = {currentGPS}")
     # print(f"GPS location test = {gps.test_latlong()}")
