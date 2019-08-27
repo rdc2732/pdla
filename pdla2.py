@@ -261,29 +261,27 @@ def main():
         ((-111.685897211983, 33.1617709942974), "POS21"), \
         ]
 
-    # while True:
-    #     try:
-    #         s = api.get_states(bbox=bbox_coords)
-    #     except:  # catch *all* exceptions
-    #         e = sys.exc_info()[0]
-    #         # print("\tError: %s\n" % e)
-    #     else:
-    #         for s1 in s.states:
-    #             callsign = (s1.callsign + "*" * 8)[:7]
-    #             long = s1.longitude
-    #             lat = s1.latitude
-    #             newPlane = airplane((long,lat), callsign)
-    #             airspace.add_planes(newPlane)
-    #         airspace.report_grid()
-    #         # bytes = airspace.report_hex()
-    #         # for x in bytes:
-    #         #     print(f"{x:02x}")
-    #         # print()
-    #         bytes = airspace.report_hex2()
-    #         for x in bytes:
-    #             print("%02X" % x)
-    #         airspace.clear_planes()
-    #     time.sleep(10)
+    while True:
+        try:
+            s = api.get_states(bbox=bbox_coords)
+        except:  # catch *all* exceptions
+            e = sys.exc_info()[0]
+            # print("\tError: %s\n" % e)
+        else:
+            for s1 in s.states:
+                callsign = (s1.callsign + "*" * 8)[:7]
+                long = s1.longitude
+                lat = s1.latitude
+                newPlane = airplane((long,lat), callsign)
+                airspace.add_planes(newPlane)
+            # airspace.report_cells()
+            # airspace.report_grid()
+            bytes = airspace.report_hex()
+            for x in bytes:
+                print("%02X" % x)
+            print()
+            airspace.clear_planes()
+        time.sleep(10)
 
     # for j, sim in enumerate(simulate_list):
     #     newPlane = airplane(sim[0],sim[1])
