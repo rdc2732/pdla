@@ -132,7 +132,7 @@ class airSpace(object):
     # the number of rows and columns it will be divided into.
     def __init__(self, longlat, grid, scale, degreeConversions):
         self.long, self.lat = longlat
-        self.rows, self.columns = grid
+        self.columns, self.rows = grid
         self.scale = scale
         self.degreeConversions = degreeConversions
         self.longDegConv, self.latDegConv = self.degreeConversions
@@ -151,43 +151,44 @@ class airSpace(object):
         # by a full offset it will end up in the correct boxes for each row and column
         self.cellCoord = (self.UL[0] - (self.longOffset / 2), self.UL[1] + (self.latOffset / 2))
 
-        if self.rows > 1 or self.columns > 1: # Don't try to divde individual cells
+        if self.rows > 1 or self.columns > 1: # Don't try to divide individual cells
             # build an empty 2D array
             self.arr = [[None for i in range(self.columns)] for j in range(self.rows)]
 
             # fill the array with airspace cells
-            for self.i in range(self.rows):
-                for self.j in range(self.columns):
+            for self.j in range(self.rows):
+                for self.i in range(self.columns):
                     self.newLong = self.cellCoord[0] + self.longOffset * (self.i + 1)
                     self.newLat = self.cellCoord[1] - self.latOffset * (self.j + 1)
                     self.arr[self.i][self.j] = \
                         airSpace((self.newLong, self.newLat),(1,1), self.scale, self.degreeConversions)
 
     def report_cells(self):
-        for self.i in range(self.rows):
-            for self.j in range (self.columns):
-                self.cell = self.arr[self.i][self.j]
+        for self.j in range(self.rows):
+            for self.i in range (self.columns):
+                self.cell = self.arr[self.j][self.i]
                 if len(self.cell.planes) > 0:
                     for self.aPlane in self.cell.planes:
-                        print("%02d%02d:\t%s (%.4f, %.4f)" % (self.i, self.j, self.aPlane.ID, self.aPlane.long, self.aPlane.lat))
+                        print("%02d%02d:\t%s (%.4f, %.4f)" % \
+                              (self.j, self.i, self.aPlane.ID, self.aPlane.long, self.aPlane.lat))
         # print("\n---\n")
 
     def report_grid(self):
-        for self.i in range(self.rows):
-            for self.j in range (self.columns):
+        for self.j in range(self.rows):
+            for self.i in range (self.columns):
                 self.cell = self.arr[self.i][self.j]
                 print("%02d " % len(self.cell.planes),end="")
             print()
-        # print("\n---\n")
+        print("\n---\n")
 
 
     def report_hex(self):
         self.hex_buffer = []
-        for self.i in range(self.rows):
+        for self.j in range(self.rows):
             self.hex_item = 0
-            for self.j in range (self.columns-1, -1, -1):
+            for self.i in range (self.columns-1, -1, -1):
                 if len(self.arr[self.i][self.j].planes) > 0:
-                    self.hex_item += 2 ** (7-self.j)
+                    self.hex_item += 2 ** (7-self.i)
             self.hex_buffer.append(self.hex_item)
 
         return self.hex_buffer
@@ -226,7 +227,7 @@ def main():
     # it has a range with five positions weighted as shown.
     gridsize = (8,8) # rows, columns
     # device = pdla(gridsize, [.5, 1, 4, 50, 100])
-    device = pdla(gridsize, [4])
+    device = pdla(gridsize, [2])
     currentScale = device.get_scale()
     default_coordinates = (-111.7304790, 33.2674290)
     #default_coordinates = (-112.011667, 33.434167)
@@ -236,25 +237,28 @@ def main():
     airspace = airSpace(currentGPS, gridsize, currentScale, degreeConversions)
     bbox_coords = (airspace.LR[1],airspace.UL[1],airspace.UL[0],airspace.LR[0])
 
-    simulate_list = [
+    simulate_list = [\
         ((-111.824224364052, 33.1617709942974), "POS1"), \
         ((-111.824224364052, 33.1906854957231), "POS2"), \
         ((-111.824224364052, 33.2195999971487), "POS3"), \
         ((-111.824224364052, 33.2485144985744), "POS4"), \
-        ((-111.824224364052, 33.3063435014256), "POS5"), \
-        ((-111.824224364052, 33.3352580028513), "POS6"), \
-        ((-111.789642576034, 33.3352580028513), "POS7"), \
-        ((-111.755060788017, 33.3352580028513), "POS8"), \
-        ((-111.685897211983, 33.3352580028513), "POS9"), \
-        ((-111.651315423966, 33.3352580028513), "POS10"), \
-        ((-111.616733635948, 33.3352580028513), "POS11"), \
-        ((-111.616733635948, 33.3063435014256), "POS12"), \
-        ((-111.616733635948, 33.2485144985744), "POS13"), \
-        ((-111.616733635948, 33.2195999971487), "POS14"), \
-        ((-111.651315423966, 33.2195999971487), "POS15"), \
-        ((-111.685897211983, 33.2195999971487), "POS16"), \
-        ((-111.685897211983, 33.1906854957231), "POS17"), \
-        ((-111.685897211983, 33.1617709942974), "POS18"),
+        ((-111.824224364052, 33.277429), "POS5"), \
+        ((-111.824224364052, 33.3063435014256), "POS6"), \
+        ((-111.824224364052, 33.3352580028513), "POS7"), \
+        ((-111.789642576034, 33.3352580028513), "POS8"), \
+        ((-111.755060788017, 33.3352580028513), "POS9"), \
+        ((-111.720479, 33.3352580028513), "POS10"), \
+        ((-111.685897211983, 33.3352580028513), "POS11"), \
+        ((-111.651315423966, 33.3352580028513), "POS12"), \
+        ((-111.616733635948, 33.3352580028513), "POS13"), \
+        ((-111.616733635948, 33.3063435014256), "POS14"), \
+        ((-111.616733635948, 33.277429), "POS15"), \
+        ((-111.616733635948, 33.2485144985744), "POS16"), \
+        ((-111.616733635948, 33.2195999971487), "POS17"), \
+        ((-111.651315423966, 33.2195999971487), "POS18"), \
+        ((-111.685897211983, 33.2195999971487), "POS19"), \
+        ((-111.685897211983, 33.1906854957231), "POS20"), \
+        ((-111.685897211983, 33.1617709942974), "POS21"), \
         ]
 
     # while True:
@@ -281,23 +285,15 @@ def main():
     #         airspace.clear_planes()
     #     time.sleep(10)
 
-    for sim in simulate_list:
-        # print(sim[0],sim[1])
-        newPlane = airplane(sim[0],sim[1])
-        airspace.add_planes(newPlane)
-        # airspace.report_cells()
-        bytes = airspace.report_hex()
-        for x in bytes:
-            print("%02X" % x)
-        print()
-        bytes = airspace.report_hex2()
-        for x in bytes:
-            print("%02X" % x)
-        airspace.clear_planes()
-        print()
-        print()
-
-        # time.sleep(1)
+    # for j, sim in enumerate(simulate_list):
+    #     newPlane = airplane(sim[0],sim[1])
+    #     airspace.add_planes(newPlane)
+    #     bytes = airspace.report_hex()
+    #     for i, x in enumerate(bytes):
+    #         print("pos: %d, hex1: %d, %02X" % (j+1, i+1, x))
+    #     print()
+    #     airspace.clear_planes()
+    #     time.sleep(1)
 
 if __name__ == "__main__":
     # execute only if run as a script
