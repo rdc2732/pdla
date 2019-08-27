@@ -30,12 +30,7 @@ x    Map aircraft to cells
 
 Assumptions:
     Cell display is an 8x8 matrix
-
-
-
-
 """
-
 
 class pdla(object):
     def __init__(self, grid, span):
@@ -118,12 +113,10 @@ class GPSinterface(object):
     def test_latlong(self):
         return False
 
-
 class airplane(object):
     def __init__(self, longlat, ID):
         self.long, self.lat  = longlat
         self.ID = ID
-
 
 class airSpace(object):
     # The airspace is going to be created from the center lat, long.
@@ -147,8 +140,9 @@ class airSpace(object):
         self.LR = (self.long + (self.columns * self.longOffset / 2), \
                    self.lat - (self.rows * self.latOffset / 2))
 
-        # preset the initial cellCoord to be 1/2 a box above and left of UL. When it is incremented
-        # by a full offset it will end up in the correct boxes for each row and column
+        # preset the initial cellCoord to be 1/2 a box above and left of UL. When it
+        # is incremented by a full offset it will end up in the correct boxes for each
+        # row and column
         self.cellCoord = (self.UL[0] - (self.longOffset / 2), self.UL[1] + (self.latOffset / 2))
 
         if self.rows > 1 or self.columns > 1: # Don't try to divide individual cells
@@ -161,7 +155,8 @@ class airSpace(object):
                     self.newLong = self.cellCoord[0] + self.longOffset * (self.i + 1)
                     self.newLat = self.cellCoord[1] - self.latOffset * (self.j + 1)
                     self.arr[self.i][self.j] = \
-                        airSpace((self.newLong, self.newLat),(1,1), self.scale, self.degreeConversions)
+                        airSpace((self.newLong, self.newLat),(1,1), self.scale,\
+                                 self.degreeConversions)
 
     def report_cells(self):
         for self.j in range(self.rows):
@@ -170,8 +165,8 @@ class airSpace(object):
                 if len(self.cell.planes) > 0:
                     for self.aPlane in self.cell.planes:
                         print("%02d%02d:\t%s (%.4f, %.4f)" % \
-                              (self.j, self.i, self.aPlane.ID, self.aPlane.long, self.aPlane.lat))
-        # print("\n---\n")
+                              (self.j, self.i, self.aPlane.ID, self.aPlane.long,\
+                               self.aPlane.lat))
 
     def report_grid(self):
         for self.j in range(self.rows):
@@ -180,7 +175,6 @@ class airSpace(object):
                 print("%02d " % len(self.cell.planes),end="")
             print()
         print("\n---\n")
-
 
     def report_hex(self):
         self.hex_buffer = []
@@ -203,7 +197,6 @@ class airSpace(object):
             self.hex_buffer.append(self.hex_item)
 
         return self.hex_buffer
-
 
     def clear_planes(self):
         self.planes = []
