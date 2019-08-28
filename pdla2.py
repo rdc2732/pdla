@@ -114,9 +114,11 @@ class GPSinterface(object):
         return False
 
 class airplane(object):
-    def __init__(self, longlat, ID):
+    def __init__(self, longlat, ID, velocity, on_ground):
         self.long, self.lat  = longlat
         self.ID = ID
+        self.velocity = velocity
+        self.on_ground = on_ground
 
 class airSpace(object):
     # The airspace is going to be created from the center lat, long.
@@ -164,9 +166,10 @@ class airSpace(object):
                 self.cell = self.arr[self.j][self.i]
                 if len(self.cell.planes) > 0:
                     for self.aPlane in self.cell.planes:
-                        print("%02d%02d:\t%s (%.4f, %.4f)" % \
+                        print("%02d%02d:\t%s (%.4f, %.4f) %6.1f, %s" % \
                               (self.j, self.i, self.aPlane.ID, self.aPlane.long,\
-                               self.aPlane.lat))
+                               self.aPlane.lat, self.aPlane.velocity, self.aPlane.on_ground))
+        print()
 
     def report_grid(self):
         for self.j in range(self.rows):
@@ -220,7 +223,7 @@ def main():
     # it has a range with five positions weighted as shown.
     gridsize = (8,8) # rows, columns
     # device = pdla(gridsize, [.5, 1, 4, 50, 100])
-    device = pdla(gridsize, [2])
+    device = pdla(gridsize, [5])
     currentScale = device.get_scale()
     default_coordinates = (-111.7304790, 33.2674290)
     #default_coordinates = (-112.011667, 33.434167)
@@ -265,12 +268,15 @@ def main():
                 callsign = (s1.callsign + "*" * 8)[:7]
                 long = s1.longitude
                 lat = s1.latitude
-                newPlane = airplane((long,lat), callsign)
+                velocity = s1.velocity * 2.23694
+                on_ground = s1.on_ground
+                newPlane = airplane((long,lat), callsign, velocity, on_ground)
                 airspace.add_planes(newPlane)
-            bytes = airspace.report_hex()
-            for index, value in enumerate(bytes):
-                print("%02X" % value)
-                device.output_matrix([index + 1, value])
+            # bytes = airspace.report_hex()
+            # for index, value in enumerate(bytes):
+            #     print("%02X" % value)
+            #     # device.output_matrix([index + 1, value])
+            airspace.report_grid()
             airspace.clear_planes()
         time.sleep(10)
 
