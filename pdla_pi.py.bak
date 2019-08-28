@@ -9,6 +9,7 @@
    Refactor version 2.
 """
 from opensky_api import OpenSkyApi
+import spidev
 import sys
 import time
 import math
@@ -32,11 +33,39 @@ Assumptions:
     Cell display is an 8x8 matrix
 """
 
+
 class pdla(object):
     def __init__(self, grid, span):
         self.rows, self.columns = grid
         self.span = span
         self.scale_display = scaleDisplay(self.span)
+        self.spi = spidev.SpiDev()
+        self.spi.open(0,0)
+        self.spi.max_speed_hz = 5000
+
+        # setup max7921
+        self.spi.xfer([0x0C,0x01]) # Normal Operation
+        self.spi.xfer([0x09,0x00]) # No Decode Mode
+        self.spi.xfer([0x0B,0x07]) # Scan limit 8 digits
+        time.sleep(15)
+        for i in range(1,9):       # Blank the display
+            self.spi.xfer([i,0x00])
+            
+        self.spi.xfer([1,0xAA])         # Output test pattern
+        self.spi.xfer([2,0x55])        
+        self.spi.xfer([3,0xAA])
+        self.spi.xfer([4,0x55])
+        self.spi.xfer([5,0xAA])
+        self.spi.xfer([6,0x55])
+        self.spi.xfer([7,0xAA])
+        self.spi.xfer([8,0x55])
+        time.sleep(5)
+
+        for i in range(1,9):       # Blank the display
+            self.spi.xfer([i,0x00])
+                                       
+    def output_matrix(self, pattern):
+        self.spi.xfer(pattern)
 
     def get_scale(self):
         return self.scale_display.value()
@@ -272,17 +301,9 @@ def main():
                 print("%02X" % value)
                 device.output_matrix([index + 1, value])
             airspace.clear_planes()
+
         time.sleep(10)
 
-    # for j, sim in enumerate(simulate_list):
-    #     newPlane = airplane(sim[0],sim[1])
-    #     airspace.add_planes(newPlane)
-    #     bytes = airspace.report_hex()
-    #     for i, x in enumerate(bytes):
-    #         print("pos: %d, hex1: %d, %02X" % (j+1, i+1, x))
-    #     print()
-    #     airspace.clear_planes()
-    #     time.sleep(1)
 
 if __name__ == "__main__":
     # execute only if run as a script

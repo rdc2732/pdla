@@ -268,9 +268,9 @@ def main():
                 newPlane = airplane((long,lat), callsign)
                 airspace.add_planes(newPlane)
             bytes = airspace.report_hex()
-            for index, value in enumerate(bytes):
-                print("%02X" % value)
-                device.output_matrix([index + 1, value])
+            for x in bytes:
+                print("%02X" % x)
+            print()
             airspace.clear_planes()
         time.sleep(10)
 

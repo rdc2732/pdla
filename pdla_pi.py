@@ -9,6 +9,7 @@
    Refactor version 2.
 """
 from opensky_api import OpenSkyApi
+import spidev
 import sys
 import time
 import math
@@ -37,6 +38,33 @@ class pdla(object):
         self.rows, self.columns = grid
         self.span = span
         self.scale_display = scaleDisplay(self.span)
+        self.spi = spidev.SpiDev()
+        self.spi.open(0,0)
+        self.spi.max_speed_hz = 5000
+
+        # setup max7921
+        self.spi.xfer([0x0C,0x01]) # Normal Operation
+        self.spi.xfer([0x09,0x00]) # No Decode Mode
+        self.spi.xfer([0x0B,0x07]) # Scan limit 8 digits
+        time.sleep(15)
+        for i in range(1,9):       # Blank the display
+            self.spi.xfer([i,0x00])
+            
+        self.spi.xfer([1,0xAA])         # Output test pattern
+        self.spi.xfer([2,0x55])        
+        self.spi.xfer([3,0xAA])
+        self.spi.xfer([4,0x55])
+        self.spi.xfer([5,0xAA])
+        self.spi.xfer([6,0x55])
+        self.spi.xfer([7,0xAA])
+        self.spi.xfer([8,0x55])
+        time.sleep(5)
+
+        for i in range(1,9):       # Blank the display
+            self.spi.xfer([i,0x00])
+                                       
+    def output_matrix(self, pattern):
+        self.spi.xfer(pattern)
 
     def get_scale(self):
         return self.scale_display.value()
@@ -189,11 +217,11 @@ class airSpace(object):
 
     def report_hex2(self):
         self.hex_buffer = []
-        for self.i in range(self.rows):
+        for self.j in range(self.rows):
             self.hex_item = 0
-            for self.j in range (self.columns):
+            for self.i in range (self.columns):
                 if len(self.arr[self.i][self.j].planes) > 0:
-                    self.hex_item += 2 ** (self.j)
+                    self.hex_item += 2 ** (self.i)
             self.hex_buffer.append(self.hex_item)
 
         return self.hex_buffer
@@ -267,22 +295,24 @@ def main():
                 lat = s1.latitude
                 newPlane = airplane((long,lat), callsign)
                 airspace.add_planes(newPlane)
-            bytes = airspace.report_hex()
+            bytes = airspace.report_hex2()
             for index, value in enumerate(bytes):
                 print("%02X" % value)
                 device.output_matrix([index + 1, value])
             airspace.clear_planes()
+        print()
         time.sleep(10)
 
-    # for j, sim in enumerate(simulate_list):
-    #     newPlane = airplane(sim[0],sim[1])
-    #     airspace.add_planes(newPlane)
-    #     bytes = airspace.report_hex()
-    #     for i, x in enumerate(bytes):
-    #         print("pos: %d, hex1: %d, %02X" % (j+1, i+1, x))
-    #     print()
-    #     airspace.clear_planes()
-    #     time.sleep(1)
+#     for j, sim in enumerate(simulate_list):
+#         newPlane = airplane(sim[0],sim[1])
+#         airspace.add_planes(newPlane)
+#         bytes = airspace.report_hex2()
+#         for i, x in enumerate(bytes):
+#             print("pos: %d, hex1: %d, %02X" % (j+1, i+1, x))
+#             device.output_matrix([i + 1, x])
+#         print()
+#         airspace.clear_planes()
+#         time.sleep(1)
 
 if __name__ == "__main__":
     # execute only if run as a script

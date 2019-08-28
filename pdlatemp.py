@@ -5,10 +5,9 @@
    This program enables the associated hardware that encompasses
    the PDLA system.  It is a low resolution, portable display of
    aircraft in the area near the user.
-
-   Refactor version 2.
 """
 from opensky_api import OpenSkyApi
+import spidev
 import sys
 import time
 import math
@@ -30,14 +29,43 @@ x    Map aircraft to cells
 
 Assumptions:
     Cell display is an 8x8 matrix
+
+
+
+
 """
+
 
 class pdla(object):
     def __init__(self, grid, span):
         self.rows, self.columns = grid
         self.span = span
         self.scale_display = scaleDisplay(self.span)
+        self.spi = spidev.SpiDev()
+        self.spi.open(0,0)
+        self.spi.max_speed_hz = 5000
 
+        # setup max7921
+        self.spi.xfer([0x0C,0x01]) # Normal Operation
+        self.spi.xfer([0x09,0x00]) # No Decode Mode
+        self.spi.xfer([0x0B,0x07]) # Scan limit 8 digits
+        time.sleep(15)
+        for i in range(1,9):       # Blank the display
+            spi.xfer([i,0x00])
+            
+        spi.xfer([i,0xAA])         # Output test pattern
+        spi.xfer([i,0x55])        
+        spi.xfer([i,0xAA])
+        spi.xfer([i,0x55])
+        spi.xfer([i,0xAA])
+        spi.xfer([i,0x55])
+        spi.xfer([i,0xAA])
+        spi.xfer([i,0x55])
+        time.sleep(5)
+
+        for i in range(1,9):       # Blank the display
+            spi.xfer([i,0x00])
+                                       
     def get_scale(self):
         return self.scale_display.value()
 
@@ -113,10 +141,12 @@ class GPSinterface(object):
     def test_latlong(self):
         return False
 
+
 class airplane(object):
     def __init__(self, longlat, ID):
         self.long, self.lat  = longlat
         self.ID = ID
+
 
 class airSpace(object):
     # The airspace is going to be created from the center lat, long.
@@ -124,12 +154,12 @@ class airSpace(object):
     # from the center.  It will then create sub-airspaces based on
     # the number of rows and columns it will be divided into.
     def __init__(self, longlat, grid, scale, degreeConversions):
+        self.CTR = longlat
         self.long, self.lat = longlat
-        self.columns, self.rows = grid
+        self.rows, self.columns = grid
         self.scale = scale
-        self.degreeConversions = degreeConversions
-        self.longDegConv, self.latDegConv = self.degreeConversions
-
+        self.longDegConv, self.latDegConv = degreeConversions
+        self.degreeConversions = (self.longDegConv, self.latDegConv)
         self.latOffset = self.scale * self.latDegConv
         self.longOffset = self.scale * self.longDegConv
         self.planes = []
@@ -140,49 +170,57 @@ class airSpace(object):
         self.LR = (self.long + (self.columns * self.longOffset / 2), \
                    self.lat - (self.rows * self.latOffset / 2))
 
-        # preset the initial cellCoord to be 1/2 a box above and left of UL. When it
-        # is incremented by a full offset it will end up in the correct boxes for each
-        # row and column
-        self.cellCoord = (self.UL[0] - (self.longOffset / 2), self.UL[1] + (self.latOffset / 2))
+        # print(f"{self.CTR[0]}, {self.CTR[1]}, {self.UL[0]}, {self.UL[1]}, {self.LR[0]}, {self.LR[1]}")
+        # print(f"{self.longOffset}, {self.latOffset}, {self.rows}, {self.columns}")
 
-        if self.rows > 1 or self.columns > 1: # Don't try to divide individual cells
+        # preset the initial cellCoord to be 1/2 a box above and left of UL. When it is incremented
+        # by a full offset it will end up in the correct boxes for each row and column
+        self.cellCoord = (self.UL[0] - (self.longOffset / 2), self.UL[1] + (self.latOffset / 2))
+        # print(f"UL = {self.UL}, cellCoord =  {self.cellCoord}")
+
+        if self.rows > 1 or self.columns > 1: # Don't try to divde individual cells
             # build an empty 2D array
             self.arr = [[None for i in range(self.columns)] for j in range(self.rows)]
 
             # fill the array with airspace cells
-            for self.j in range(self.rows):
-                for self.i in range(self.columns):
+            for self.i in range(self.rows):
+                for self.j in range(self.columns):
                     self.newLong = self.cellCoord[0] + self.longOffset * (self.i + 1)
                     self.newLat = self.cellCoord[1] - self.latOffset * (self.j + 1)
+                    # print(f"{self.i},{self.j},A{str(self.i*8+self.j)},{self.newLong},{self.newLat}")
                     self.arr[self.i][self.j] = \
-                        airSpace((self.newLong, self.newLat),(1,1), self.scale,\
-                                 self.degreeConversions)
+                        airSpace((self.newLong, self.newLat),(1,1), self.scale, self.degreeConversions)
 
     def report_cells(self):
-        for self.j in range(self.rows):
-            for self.i in range (self.columns):
-                self.cell = self.arr[self.j][self.i]
+        for self.i in range(self.rows):
+            for self.j in range (self.columns):
+                self.cell = self.arr[self.i][self.j]
+                # print(f"A{str(self.i*self.rows+self.j)}-{self.i}{self.j}: ",end="")
+                # print(f"{self.cell.CTR[0]:.4f},{self.cell.CTR[1]:.4f},",end="")
+                # print(f"{self.cell.UL[0]:.4f},{self.cell.UL[1]:.4f},",end="")
+                # print(f"{self.cell.LR[0]:.4f},{self.cell.LR[1]:.4f}",end="")
+                # print(f"A{str(self.i*self.numrows+self.j)}-{self.i}{self.j}: planes = {len(self.cell.planes)}",end="")
                 if len(self.cell.planes) > 0:
                     for self.aPlane in self.cell.planes:
-                        print("%02d%02d:\t%s (%.4f, %.4f)" % \
-                              (self.j, self.i, self.aPlane.ID, self.aPlane.long,\
-                               self.aPlane.lat))
+                        print("%02d%02d:\t%s (%.4f, %.4f)" % (self.i, self.j, self.aPlane.ID, self.aPlane.long, self.aPlane.lat))
+        print("\n---\n")
 
     def report_grid(self):
-        for self.j in range(self.rows):
-            for self.i in range (self.columns):
+        for self.i in range(self.rows):
+            for self.j in range (self.columns):
                 self.cell = self.arr[self.i][self.j]
                 print("%02d " % len(self.cell.planes),end="")
             print()
         print("\n---\n")
 
+
     def report_hex(self):
         self.hex_buffer = []
-        for self.j in range(self.rows):
+        for self.i in range(self.rows):
             self.hex_item = 0
-            for self.i in range (self.columns-1, -1, -1):
+            for self.j in range (self.columns-1, -1, -1):
                 if len(self.arr[self.i][self.j].planes) > 0:
-                    self.hex_item += 2 ** (7-self.i)
+                    self.hex_item += 2 ** (7-self.j)
             self.hex_buffer.append(self.hex_item)
 
         return self.hex_buffer
@@ -197,6 +235,7 @@ class airSpace(object):
             self.hex_buffer.append(self.hex_item)
 
         return self.hex_buffer
+
 
     def clear_planes(self):
         self.planes = []
@@ -220,7 +259,7 @@ def main():
     # it has a range with five positions weighted as shown.
     gridsize = (8,8) # rows, columns
     # device = pdla(gridsize, [.5, 1, 4, 50, 100])
-    device = pdla(gridsize, [2])
+    device = pdla(gridsize, [10, 10, 10, 10, 10])
     currentScale = device.get_scale()
     default_coordinates = (-111.7304790, 33.2674290)
     #default_coordinates = (-112.011667, 33.434167)
@@ -229,30 +268,6 @@ def main():
     degreeConversions = gps.get_conversion()
     airspace = airSpace(currentGPS, gridsize, currentScale, degreeConversions)
     bbox_coords = (airspace.LR[1],airspace.UL[1],airspace.UL[0],airspace.LR[0])
-
-    simulate_list = [\
-        ((-111.824224364052, 33.1617709942974), "POS1"), \
-        ((-111.824224364052, 33.1906854957231), "POS2"), \
-        ((-111.824224364052, 33.2195999971487), "POS3"), \
-        ((-111.824224364052, 33.2485144985744), "POS4"), \
-        ((-111.824224364052, 33.277429), "POS5"), \
-        ((-111.824224364052, 33.3063435014256), "POS6"), \
-        ((-111.824224364052, 33.3352580028513), "POS7"), \
-        ((-111.789642576034, 33.3352580028513), "POS8"), \
-        ((-111.755060788017, 33.3352580028513), "POS9"), \
-        ((-111.720479, 33.3352580028513), "POS10"), \
-        ((-111.685897211983, 33.3352580028513), "POS11"), \
-        ((-111.651315423966, 33.3352580028513), "POS12"), \
-        ((-111.616733635948, 33.3352580028513), "POS13"), \
-        ((-111.616733635948, 33.3063435014256), "POS14"), \
-        ((-111.616733635948, 33.277429), "POS15"), \
-        ((-111.616733635948, 33.2485144985744), "POS16"), \
-        ((-111.616733635948, 33.2195999971487), "POS17"), \
-        ((-111.651315423966, 33.2195999971487), "POS18"), \
-        ((-111.685897211983, 33.2195999971487), "POS19"), \
-        ((-111.685897211983, 33.1906854957231), "POS20"), \
-        ((-111.685897211983, 33.1617709942974), "POS21"), \
-        ]
 
     while True:
         try:
@@ -267,22 +282,24 @@ def main():
                 lat = s1.latitude
                 newPlane = airplane((long,lat), callsign)
                 airspace.add_planes(newPlane)
-            bytes = airspace.report_hex()
-            for index, value in enumerate(bytes):
-                print("%02X" % value)
-                device.output_matrix([index + 1, value])
+            airspace.report_grid()
+            # bytes = airspace.report_hex()
+            # for x in bytes:
+            #     print(f"{x:02x}")
+            # print()
+            bytes = airspace.report_hex2()
+            for x in bytes:
+                print("%02X" % x)
             airspace.clear_planes()
         time.sleep(10)
 
-    # for j, sim in enumerate(simulate_list):
-    #     newPlane = airplane(sim[0],sim[1])
-    #     airspace.add_planes(newPlane)
-    #     bytes = airspace.report_hex()
-    #     for i, x in enumerate(bytes):
-    #         print("pos: %d, hex1: %d, %02X" % (j+1, i+1, x))
-    #     print()
-    #     airspace.clear_planes()
-    #     time.sleep(1)
+
+    # print(f"GPS Coordinates = {currentGPS}")
+    # print(f"GPS location test = {gps.test_latlong()}")
+    # print(f"Long/Lat conversion factors = {degreeConversions}")
+    # print(f"Scale value = {currentScale}")
+    # print(f"LED Display = {device.get_scale_status()}")
+
 
 if __name__ == "__main__":
     # execute only if run as a script
